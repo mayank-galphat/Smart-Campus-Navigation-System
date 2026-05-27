@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Faculty Portal – Medicaps</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .portal-container { max-width: 400px; margin: 40px auto; padding: 24px; background: white; border-radius: 16px; box-shadow: var(--shadow); }
+    .input-field { width: 100%; padding: 12px; margin-bottom: 16px; border: 1.5px solid var(--border); border-radius: 10px; font-family: 'Outfit'; font-size: 14px; box-sizing: border-box; }
+    .input-field:focus { outline: none; border-color: var(--orange); }
+    .btn-primary { width: 100%; padding: 12px; background: var(--navy); color: white; border: none; border-radius: 10px; font-family: 'Outfit'; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .btn-primary:hover { background: var(--navy-light); }
+    .btn-danger { background: #dc2626; margin-top: 10px; }
+    .status-msg { padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .success { background: #dcfce7; color: #166534; display: block; }
+    .error { background: #fee2e2; color: #991b1b; display: block; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-logo">👨‍🏫</div>
+    <div class="header-text">
+      <h1>Faculty Portal</h1>
+      <p>Live Location Updater</p>
+    </div>
+  </div>
+</header>
+
+<div class="portal-container" id="loginSection">
+  <h2 style="margin-bottom: 20px; color: var(--navy); text-align: center;">Faculty Login</h2>
+  <div id="loginMsg" class="status-msg"></div>
+  <input type="email" id="email" class="input-field" placeholder="Email (sharma@medicaps.ac.in)">
+  <input type="password" id="password" class="input-field" placeholder="Password (faculty123)">
+  <button class="btn-primary" onclick="facultyLogin()">Login →</button>
+  <div style="text-align: center; margin-top: 16px;">
+    <a href="index.html" style="color: var(--text-muted); font-size: 13px; text-decoration: none;">← Back to Map</a>
+  </div>
+</div>
+
+<div class="portal-container" id="dashboardSection" style="display: none;">
+  <h2 style="margin-bottom: 8px; color: var(--navy);">Welcome, <span id="facName"></span>!</h2>
+  <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;">Update your current location to override the automated timetable.</p>
+  
+  <div id="updateMsg" class="status-msg"></div>
+
+  <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">CURRENT BLOCK</label>
+  <select id="currentBlock" class="input-field" style="margin-top: 6px;">
+    <option value="">Loading blocks...</option>
+  </select>
+
+  <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">ROOM NO. / STATUS</label>
+  <input type="text" id="currentRoom" class="input-field" placeholder="e.g. Room 204" style="margin-top: 6px;">
+
+  <button class="btn-primary" onclick="updateLocation()">📍 Update Location Override</button>
+  <button class="btn-primary btn-danger" onclick="facultyLogout()">Logout</button>
+</div>
+
+<script>
+  let currentFacultyId = null;
+
+  // 1. Page load hote hi saari locations API se fetch karo
+  window.onload = function() {
+    fetch('http://127.0.0.1:5000/api/locations')
+      .then(res => res.json())
+      .then(data => {
+        const select = document.getElementById('currentBlock');
+        select.innerHTML = ''; 
+        
+        data.forEach(loc => {
+          const opt = document.createElement('option');
+          opt.value = loc.name;
+          opt.textContent = loc.name;
+          select.appendChild(opt);
+        });
+
+        const leaveOpt = document.createElement('option');
+        leaveOpt.value = 'On Leave';
+        leaveOpt.textContent = '🛑 On Leave / Off Campus';
+        select.appendChild(leaveOpt);
+      })
+      .catch(err => {
+        console.error('Error fetching locations:', err);
+        document.getElementById('currentBlock').innerHTML = '<option value="">Error loading locations</option>';
+      });
+  };
+
+  // 2. Login Logic
+  function facultyLogin() {
+    fetch('http://127.0.0.1:5000/api/faculty/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('password').value })
+    }).then(r => r.json()).then(d => {
+      if (d.success) {
+        currentFacultyId = d.faculty.id;
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('dashboardSection').style.display = 'block';
+        document.getElementById('facName').textContent = d.faculty.name;
+        document.getElementById('currentBlock').value = d.faculty.block || 'Faculty Building';
+        document.getElementById('currentRoom').value = d.faculty.room || '';
+      } else {
+        const msg = document.getElementById('loginMsg');
+        msg.className = 'status-msg error'; msg.textContent = 'Invalid Email or Password!';
+      }
+    });
+  }
+
+  // 3. Update Location Logic
+  function updateLocation() {
+    fetch('http://127.0.0.1:5000/api/faculty/location', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: currentFacultyId, block: document.getElementById('currentBlock').value, room: document.getElementById('currentRoom').value })
+    }).then(r => r.json()).then(d => {
+      if (d.success) {
+        const msg = document.getElementById('updateMsg');
+        msg.className = 'status-msg success'; msg.textContent = '✅ Location updated!';
+        setTimeout(() => msg.style.display = 'none', 3000);
+      }
+    });
+  }
+
+  // 4. Logout Logic
+  function facultyLogout() {
+    currentFacultyId = null;
+    document.getElementById('dashboardSection').style.display = 'none';
+    document.getElementById('loginSection').style.display = 'block';
+  }
+</script>
+</body>
+</html>

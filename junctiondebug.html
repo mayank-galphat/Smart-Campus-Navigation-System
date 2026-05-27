@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Junction Debug Map — Medicaps</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;display:flex;height:100vh;overflow:hidden}
+#map{flex:1}
+#sidebar{width:300px;background:#0f1b35;color:white;overflow-y:auto;padding:12px;flex-shrink:0;display:flex;flex-direction:column;gap:8px}
+h2{font-size:13px;color:#ff6b18;text-transform:uppercase;letter-spacing:1px}
+.legend{display:flex;flex-direction:column;gap:4px;font-size:11px;color:#94a3b8}
+.li{display:flex;align-items:center;gap:6px}
+.dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+input{width:100%;padding:6px 10px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white;font-size:12px}
+#junctionList{display:flex;flex-direction:column;gap:3px;overflow-y:auto}
+.ji{padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.06);cursor:pointer;display:flex;align-items:center;gap:8px;border:1px solid transparent;transition:all 0.15s}
+.ji:hover,.ji.active{background:rgba(255,107,24,0.2);border-color:#ff6b18}
+.jnum{background:#ff6b18;color:white;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;flex-shrink:0}
+.jinfo{font-size:11px}
+.jname{color:white;font-size:12px}
+.jcoord{color:#64748b;font-size:10px}
+#connPanel{background:rgba(255,255,255,0.04);border-radius:10px;padding:10px;font-size:12px}
+#connPanel h3{color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+.ci{padding:3px 0;color:#e2e8f0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.ci:last-child{border:none}
+.cjn{color:#ff6b18;font-weight:600}
+.cloc{color:#60a5fa;font-weight:600}
+.edge-label{background:#1e293b;color:#94a3b8;font-size:9px;padding:1px 4px;border-radius:3px;margin-left:4px}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div id="sidebar">
+  <h2>🔵 Junction Debug Map</h2>
+  <div class="legend">
+    <div class="li"><div class="dot" style="background:#ff6b18;border:2px solid white"></div>Junction node (numbered)</div>
+    <div class="li"><div class="dot" style="background:#3b82f6"></div>Academic Block</div>
+    <div class="li"><div class="dot" style="background:#22c55e"></div>Main Gate</div>
+    <div class="li"><div class="dot" style="background:#f59e0b"></div>Facility</div>
+    <div class="li"><div class="dot" style="background:#ec4899"></div>Hostel</div>
+    <div class="li"><div class="dot" style="background:#a855f7;border:2px solid white"></div>V Block Gate 2</div>
+  </div>
+  <div style="font-size:11px;color:#64748b;padding:4px 0;">Click a junction to see connections</div>
+  <input id="filterBox" placeholder="Search junction number or name..." oninput="buildList(this.value)">
+  <div id="junctionList"></div>
+  <div id="connPanel" style="display:none">
+    <h3>Connections — <span id="connTitle" style="color:#ff6b18"></span></h3>
+    <div id="connList"></div>
+  </div>
+</div>
+
+<script>
+var map = L.map('map').setView([22.6212, 75.8040], 17);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  {attribution:'Tiles &copy; Esri'}).addTo(map);
+
+var JN = [
+  {num:1,  id:"jn_1",  lat:22.619853, lng:75.804326},
+  {num:2,  id:"jn_2",  lat:22.620211, lng:75.804526},
+  {num:4,  id:"jn_4",  lat:22.620177, lng:75.804726},
+  {num:7,  id:"jn_7",  lat:22.621816, lng:75.803255},
+  {num:8,  id:"jn_8",  lat:22.620968, lng:75.802766},
+  {num:10, id:"jn_10", lat:22.621313, lng:75.805220},
+  {num:11, id:"jn_11", lat:22.621218, lng:75.805727},
+  {num:12, id:"jn_12", lat:22.621711, lng:75.804655},
+  {num:13, id:"jn_13", lat:22.621612, lng:75.804940},
+  {num:14, id:"jn_14", lat:22.620735, lng:75.803676},
+  {num:15, id:"jn_15", lat:22.620849, lng:75.803774},
+  {num:16, id:"jn_16", lat:22.620788, lng:75.804245},
+  {num:17, id:"jn_17", lat:22.621269, lng:75.804449},
+  {num:20, id:"jn_20", lat:22.620558, lng:75.804872},
+  {num:22, id:"jn_22", lat:22.620291, lng:75.804753},
+  {num:23, id:"jn_23", lat:22.620951, lng:75.805063},
+  {num:24, id:"jn_24", lat:22.621537, lng:75.805245},
+  {num:25, id:"jn_25", lat:22.622593, lng:75.804154},
+  {num:26, id:"jn_26", lat:22.622093, lng:75.804164},
+  {num:27, id:"jn_27", lat:22.621547, lng:75.803932},
+  {num:28, id:"jn_28", lat:22.621571, lng:75.803823},
+  {num:29, id:"jn_29", lat:22.621272, lng:75.803536},
+  {num:30, id:"jn_30", lat:22.622355, lng:75.803520},
+  {num:31, id:"jn_31", lat:22.622433, lng:75.803585},
+  {num:32, id:"jn_32", lat:22.622497, lng:75.803635},
+  {num:33, id:"jn_33", lat:22.622556, lng:75.803710},
+  {num:34, id:"jn_34", lat:22.622601, lng:75.803841},
+  {num:35, id:"jn_35", lat:22.621319, lng:75.803002},
+  {num:36, id:"jn_36", lat:22.620862, lng:75.803324},
+  {num:37, id:"jn_37", lat:22.621889, lng:75.804917},
+  {num:38, id:"jn_38", lat:22.621672, lng:75.804817},
+];
+
+// Junction-Junction connections
+var JJ = [
+  {a:"25",b:"34",dist:120},{a:"34",b:"33",dist:14},{a:"33",b:"32",dist:10},
+  {a:"32",b:"31",dist:9},{a:"31",b:"30",dist:11},{a:"30",b:"7",dist:65},
+  {a:"7",b:"35",dist:65},{a:"35",b:"8",dist:142},{a:"8",b:"36",dist:120},
+  {a:"36",b:"14",dist:112},{a:"14",b:"22",dist:211},{a:"14",b:"15",dist:16},
+  {a:"15",b:"16",dist:49},{a:"16",b:"20",dist:117},{a:"22",b:"20",dist:207},
+  {a:"20",b:"23",dist:48},{a:"23",b:"10",dist:123},{a:"10",b:"24",dist:62},
+  {a:"24",b:"13",dist:31},{a:"13",b:"38",dist:30},{a:"38",b:"12",dist:56},
+  {a:"12",b:"17",dist:60},{a:"17",b:"16",dist:57},{a:"17",b:"23",dist:70},
+  {a:"7",b:"28",dist:12},{a:"28",b:"27",dist:12},{a:"25",b:"26",dist:56},
+  {a:"26",b:"27",dist:65},{a:"27",b:"28",dist:12},{a:"28",b:"29",dist:44},
+  {a:"10",b:"11",dist:53},{a:"22",b:"4",dist:62},{a:"4",b:"2",dist:21},
+  {a:"2",b:"1",dist:45},{a:"29",b:"36",dist:51},
+];
+
+// Junction-Location connections
+var JL = [
+  {a:"25",b:"V Block",dist:88},{a:"25",b:"M Block",dist:37},{a:"25",b:"N Block",dist:37},
+  {a:"34",b:"V Block",dist:120},{a:"34",b:"M Block",dist:69},{a:"34",b:"N Block",dist:69},
+  {a:"8",b:"Main Gate",dist:65},{a:"8",b:"F Block",dist:96},{a:"8",b:"Admission Cell",dist:96},
+  {a:"35",b:"Main Library",dist:48},{a:"29",b:"Main Library",dist:16},
+  {a:"7",b:"CKD",dist:61},{a:"7",b:"Faculty Building",dist:15},
+  {a:"36",b:"Main Canteen",dist:76},{a:"27",b:"Main Canteen",dist:7},
+  {a:"11",b:"Girls Hostel",dist:18},{a:"17",b:"Q Block",dist:6},
+  {a:"23",b:"S Block",dist:3},{a:"13",b:"O Block",dist:2},
+  {a:"1",b:"B Block",dist:2},{a:"1",b:"C Block",dist:14},
+  {a:"4",b:"A Block",dist:23},{a:"24",b:"V Block Gate 2",dist:30},
+];
+
+var LOCS = [
+  {name:"Main Gate",       lat:22.620473,lng:75.802431,color:"#22c55e"},
+  {name:"A Block",         lat:22.620234,lng:75.804515,color:"#3b82f6"},
+  {name:"B Block",         lat:22.619865,lng:75.804339,color:"#3b82f6"},
+  {name:"C Block",         lat:22.619801,lng:75.804206,color:"#3b82f6"},
+  {name:"F Block",         lat:22.620705,lng:75.803678,color:"#3b82f6"},
+  {name:"M Block",         lat:22.622632,lng:75.804510,color:"#3b82f6"},
+  {name:"N Block",         lat:22.622680,lng:75.804520,color:"#3b82f6"},
+  {name:"O Block",         lat:22.621621,lng:75.804928,color:"#3b82f6"},
+  {name:"Q Block",         lat:22.621218,lng:75.804424,color:"#3b82f6"},
+  {name:"S Block",         lat:22.620973,lng:75.805056,color:"#3b82f6"},
+  {name:"V Block",         lat:22.622679,lng:75.805003,color:"#3b82f6"},
+  {name:"V Block Gate 2",  lat:22.621844,lng:75.805369,color:"#a855f7"},
+  {name:"Main Library",    lat:22.621135,lng:75.803477,color:"#f59e0b"},
+  {name:"Main Canteen",    lat:22.621521,lng:75.803989,color:"#f59e0b"},
+  {name:"Boys Hostel",     lat:22.621640,lng:75.802560,color:"#ec4899"},
+  {name:"Girls Hostel",    lat:22.621374,lng:75.805787,color:"#ec4899"},
+  {name:"CKD",             lat:22.622025,lng:75.802704,color:"#f59e0b"},
+  {name:"Faculty Building",lat:22.621894,lng:75.803131,color:"#f59e0b"},
+  {name:"Admission Cell",  lat:22.620896,lng:75.803799,color:"#f59e0b"},
+  {name:"Cricket Ground",  lat:22.621041,lng:75.802366,color:"#22c55e"},
+];
+
+// Draw location markers
+LOCS.forEach(function(loc){
+  var icon = L.divIcon({className:'',
+    html:'<div style="background:'+loc.color+';color:white;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:700;white-space:nowrap;border:1px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.5);">'+loc.name+'</div>',
+    iconAnchor:[0,8]});
+  L.marker([loc.lat,loc.lng],{icon:icon}).addTo(map);
+});
+
+var jnMarkers={}, edgeLayers=[], activeJn=null;
+
+// Draw junction markers
+JN.forEach(function(jn){
+  var icon=L.divIcon({className:'',
+    html:'<div style="background:#ff6b18;color:white;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.5);">'+jn.num+'</div>',
+    iconSize:[24,24],iconAnchor:[12,12]});
+  var m=L.marker([jn.lat,jn.lng],{icon:icon,zIndexOffset:500}).addTo(map);
+  m.bindTooltip('JN-'+jn.num+' ('+jn.id.replace('jn_','')+')',{direction:'top'});
+  m.on('click',function(){selectJn(jn.num);});
+  jnMarkers[jn.num]=m;
+});
+
+function getJn(num){ return JN.find(function(j){return j.num==num;}); }
+
+function drawEdges(highlight){
+  edgeLayers.forEach(function(l){map.removeLayer(l);}); edgeLayers=[];
+  JJ.forEach(function(c){
+    var a=getJn(c.a), b=getJn(c.b);
+    if(!a||!b) return;
+    var hi=(c.a==highlight||c.b==highlight);
+    var line=L.polyline([[a.lat,a.lng],[b.lat,b.lng]],{
+      color:hi?'#ff6b18':'rgba(100,200,255,0.55)',
+      weight:hi?4:2, dashArray:hi?null:'5,4', opacity:hi?1:0.7
+    }).addTo(map);
+    edgeLayers.push(line);
+  });
+}
+
+function selectJn(num){
+  activeJn=num;
+  buildList();
+  drawEdges(num);
+  var jn=getJn(num);
+  map.setView([jn.lat,jn.lng],19);
+  document.getElementById('connTitle').textContent='JN-'+num;
+  var connsJJ=JJ.filter(function(c){return c.a==num||c.b==num;});
+  var connsJL=JL.filter(function(c){return c.a==num;});
+  var html='';
+  connsJJ.forEach(function(c){
+    var other=c.a==num?c.b:c.a;
+    html+='<div class="ci">↔ <span class="cjn">JN-'+other+'</span> <span class="edge-label">'+c.dist+'m</span></div>';
+  });
+  connsJL.forEach(function(c){
+    html+='<div class="ci">→ <span class="cloc">'+c.b+'</span> <span class="edge-label">'+c.dist+'m</span></div>';
+  });
+  if(!html) html='<div class="ci" style="color:#64748b;">No connections</div>';
+  document.getElementById('connList').innerHTML=html;
+  document.getElementById('connPanel').style.display='block';
+}
+
+function buildList(filter){
+  var list=document.getElementById('junctionList');
+  list.innerHTML='';
+  JN.filter(function(jn){
+    if(!filter) return true;
+    return String(jn.num).includes(filter)||jn.id.replace('jn_','').includes(filter.toLowerCase());
+  }).forEach(function(jn){
+    var div=document.createElement('div');
+    div.className='ji'+(activeJn==jn.num?' active':'');
+    div.innerHTML='<div class="jnum">'+jn.num+'</div><div class="jinfo"><div class="jname">'+jn.id.replace('jn_','')+'</div><div class="jcoord">['+jn.lat+', '+jn.lng+']</div></div>';
+    div.onclick=function(){selectJn(jn.num);};
+    list.appendChild(div);
+  });
+}
+
+drawEdges(null);
+buildList();
+</script>
+</body>
+</html>

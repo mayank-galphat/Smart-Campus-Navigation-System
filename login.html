@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Login – Medicaps</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { display: flex; align-items: center; justify-content: center; height: 100vh; background: var(--bg); margin: 0; }
+    .login-box { background: white; padding: 40px 30px; border-radius: 16px; box-shadow: var(--shadow-lg); width: 100%; max-width: 350px; text-align: center; }
+    .logo-icon { font-size: 40px; margin-bottom: 10px; }
+    .input-field { width: 100%; padding: 12px; margin: 10px 0 20px 0; border: 1.5px solid var(--border); border-radius: 10px; font-family: 'Outfit'; font-size: 14px; box-sizing: border-box; }
+    .input-field:focus { outline: none; border-color: var(--orange); }
+    .btn-primary { width: 100%; padding: 12px; background: var(--navy); color: white; border: none; border-radius: 10px; font-family: 'Outfit'; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .btn-primary:hover { background: var(--navy-light); }
+    .error-msg { color: #dc2626; font-size: 13px; margin-bottom: 15px; display: none; }
+  </style>
+</head>
+<body>
+
+<div class="login-box">
+  <div class="logo-icon">📍</div>
+  <h2 style="color: var(--navy); margin: 0 0 5px 0;">Student Portal</h2>
+  <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">Login to access Campus Map</p>
+  
+  <div id="errorMsg" class="error-msg">Invalid Email or Password</div>
+
+  <input type="email" id="email" class="input-field" placeholder="Student Email (student@medicaps.ac.in)">
+  <input type="password" id="password" class="input-field" placeholder="Password (student123)">
+  
+  <button class="btn-primary" onclick="studentLogin()">Login to Map →</button>
+  <div style="margin-top: 15px; font-size: 13px;">
+    <span style="color: var(--text-muted);">New student?</span>
+    <a href="signup.html" style="color: var(--orange); font-weight: 600; text-decoration: none;">Create an account</a>
+  </div>
+</div>
+
+<script>
+  function studentLogin() {
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    
+    fetch('http://127.0.0.1:5000/api/user/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, password: password })
+    }).then(r => r.json()).then(d => {
+      if (d.success) {
+        // Login success - save session in browser and go to map
+        localStorage.setItem('studentLoggedIn', 'true');
+        localStorage.setItem('studentName', d.name);
+        window.location.href = 'index.html';
+      } else {
+        document.getElementById('errorMsg').style.display = 'block';
+      }
+    });
+  }
+</script>
+</body>
+</html>
