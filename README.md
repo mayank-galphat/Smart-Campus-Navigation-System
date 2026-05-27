@@ -2,10 +2,10 @@
 This project is a Smart Campus Navigation System developed using Flask, HTML, CSS, and JavaScript. It helps users navigate through different campus locations such as hostels, library, canteen, faculty buildings, and sports grounds using shortest path algorithms.
 # Mini Project
 
-## 📌 Project Title
+## Project Title
 Smart campus navigation System
 
-## 📝 Description
+##  Description
 A Smart Campus Navigation System developed using Flask, HTML, CSS, and JavaScript that helps users find optimal routes between different campus locations such as hostels, library, canteen, faculty buildings, and sports areas using shortest path algorithms.
 
 ## Technologies Used
@@ -26,19 +26,19 @@ A Smart Campus Navigation System developed using Flask, HTML, CSS, and JavaScrip
 pip install flask
 python App.py
   
-## 🚀 How to Run the Project
+##  How to Run the Project
 1. Download or clone the repository
 2. Open the project folder
 3. Run `index.html` (or main file)
    OR
    Run the project using your language runtime
 
-## 👨‍💻 Team Members
+## Team Members
 - Mayank Galphat
 - Mayank Kadyan
 - Mayank Kumar
 
-## 📸 Screenshots
+## Screenshots
 (Add screenshots in repository and mention here)
 
 Example:
